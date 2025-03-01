@@ -1,9 +1,9 @@
 import { Prop, SchemaFactory, Schema } from "@nestjs/mongoose";
-import { Document, Schema as MongooseSchema } from 'mongoose';
-import { AccountType, Language } from "enum";
+import { AccountType, Language, Role } from "enum";
+import { BaseSchema } from "./base.schema";
 
 @Schema({ timestamps: true })
-export class User extends Document {
+export class User extends BaseSchema {
 
     @Prop({ required: true })
     mobileNo: string;
@@ -37,9 +37,16 @@ export class User extends Document {
     @Prop()
     tableSize: string;
 
+    @Prop()
+    deviceToken: string;
 
-    @Prop({ default: false })
-    isDeleted: boolean;
+    @Prop({
+        type: String,
+        enum: Object.values(Role),
+        default: Role.ADMIN
+    })
+    role: string;
+
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

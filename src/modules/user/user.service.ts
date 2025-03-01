@@ -4,7 +4,7 @@ import { Verification } from 'src/schema/verification.schema';
 import * as moment from 'moment-timezone';
 import * as jwt from 'jsonwebtoken';
 import axios from 'axios';
-import { LoginUserInput, VerifyUserInput, ResendOtpInput } from 'src/dto/user.dto';
+import { LoginUserInput, VerifyUserInput, ResendOtpInput, UpdateUser } from 'src/dto/user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
@@ -37,14 +37,13 @@ export class UserService {
   }
 
   async userLogin(loginUserInput: LoginUserInput) {
-    const { mobileNo, areaCode, signature } = loginUserInput;
+    const { mobileNo, areaCode, signature, deviceToken } = loginUserInput;
     let user = await this.userModel.findOne({
       mobileNo: mobileNo,
       isDeleted: false,
     });
     if (!user) {
-      console.log("======================>");
-      user = await new this.userModel({ mobileNo }).save()
+      user = await new this.userModel({ mobileNo, deviceToken }).save()
     }
     const verificationData = await this.verificationModel.findOne({
       user: { _id: user._id },
@@ -66,12 +65,15 @@ export class UserService {
 
 
   async verifyUser(verifyUserInput: VerifyUserInput) {
-    const { id, otp } = verifyUserInput;
+    const { id, otp, deviceToken } = verifyUserInput;
     let user = await this.userModel.findOne({
       _id: id
     });
     if (!user) {
       throw new Error('User not exist by this id.');
+    }
+    if (user.deviceToken !== deviceToken) {
+      throw new Error('You are not able to login user because alredy login in another device.')
     }
     const userVerification = await this.verificationModel.findOne({
       user: {
@@ -86,12 +88,13 @@ export class UserService {
       throw new Error('OTP is expired.');
     }
     await this.verificationModel.deleteOne({ user: { _id: id } });
-    user.isVerified = true;
+    await this.userModel.findByIdAndUpdate(id, { isVerified: true })
 
     const token = jwt.sign(
       {
         userId: id,
-        mobileNo: user.mobileNo,
+        user,
+        deviceToken: deviceToken
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.TOKEN_EXPIRATION_TIME },
@@ -121,6 +124,18 @@ export class UserService {
     await new this.verificationModel(userVerification).save();
 
     return { message: 'Otp resend successfully' };
+  }
+
+
+  async updateUser(id: string, updateUser: UpdateUser) {
+
+    const user = await this.userModel.findById(id)
+
+    if (!user)
+      throw new Error("User not found")
+
+    return await this.userModel.updateOne({ _id: id }, updateUser);
+
   }
 
 

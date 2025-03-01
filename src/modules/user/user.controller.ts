@@ -1,6 +1,6 @@
-import { Controller, Post, Body, Request, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, Request, BadRequestException, Param, Put } from '@nestjs/common';
 import { UserService } from './user.service';
-import { LoginUserInput, VerifyUserInput, ResendOtpInput } from 'src/dto/user.dto';
+import { LoginUserInput, VerifyUserInput, ResendOtpInput, UpdateUser } from 'src/dto/user.dto';
 
 @Controller('user')
 export class UserController {
@@ -31,6 +31,16 @@ export class UserController {
   async resendOtp(@Body() resendOtpInput: ResendOtpInput) {
     try {
       return await this.userService.resendOtp(resendOtpInput);
+    } catch (error) {
+      console.log('resendOtp-error=======>:', error);
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Put(':id')
+  async updateUser(@Param('id') id: string, @Body() updateUser: UpdateUser) {
+    try {
+      return await this.userService.updateUser(id, updateUser);
     } catch (error) {
       console.log('resendOtp-error=======>:', error);
       throw new BadRequestException(error.message);

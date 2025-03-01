@@ -1,43 +1,39 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectModel } from '@nestjs/mongoose';
 import { Request } from 'express';
+import { Model } from 'mongoose';
+import { User } from 'src/schema/user.schema';
 // import { User } from 'src/database/entities/user.entity';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
     constructor(
         private jwtService: JwtService,
-        // @InjectRepository(User)
-        // private readonly userRepository: Repository<User>,
+        @InjectModel(User.name) private readonly userModel: Model<User>,
     ) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-        const requestType = context.getType()
 
-        let request: Request & { user: any } = context.switchToHttp().getRequest();
-
-
-        const token = this.extractTokenFromHeader(request);
-        if (!token) {
-            throw new UnauthorizedException();
-        }
         try {
+            let request: Request & { user: any } = context.switchToHttp().getRequest();
+            const token = this.extractTokenFromHeader(request);
+            if (!token) {
+                throw new UnauthorizedException();
+            }
+
             const payload = await this.jwtService.verifyAsync(token, {
                 secret: process.env.JWT_SECRET,
             });
-            request['user'] = payload;
-            if (payload && !payload.deviceKey) {
+            request['user'] = payload.user
+            const user = await this.userModel.findOne({ _id: payload.userId });
+            if (user.isDeleted == true || user.deviceToken != payload.deviceToken) {
                 throw new UnauthorizedException();
             }
-            // const user = await this.userRepository.findOne({ where: { id: payload.userId } });
-            // if (user.activeStatus != true
-            // ) {
-            //     throw new UnauthorizedException();
-            // }
+            return true;
         } catch {
             throw new UnauthorizedException();
         }
-        return true;
     }
 
     private extractTokenFromHeader(request: Request): string | undefined {

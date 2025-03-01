@@ -1,6 +1,8 @@
 export enum Role {
-    user = 'user'
+    USER = 'user',
+    ADMIN = 'admin'
 }
+
 
 export enum AccountType {
     SMALL_SHOP = 'Small Shop',
