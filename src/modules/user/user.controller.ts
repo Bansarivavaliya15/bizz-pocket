@@ -1,6 +1,9 @@
-import { Controller, Post, Body, Request, BadRequestException, Param, Put } from '@nestjs/common';
+import { Controller, Post, Body, Request, BadRequestException, Param, Put, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { UserService } from './user.service';
 import { LoginUserInput, VerifyUserInput, ResendOtpInput, UpdateUser } from 'src/dto/user.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerOptions } from 'src/multer.config';
+
 
 @Controller('user')
 export class UserController {
@@ -38,9 +41,10 @@ export class UserController {
   }
 
   @Put(':id')
-  async updateUser(@Param('id') id: string, @Body() updateUser: UpdateUser) {
+  @UseInterceptors(FileInterceptor('attachments', multerOptions))
+  async updateUser(@Request() req, @UploadedFiles() files, @Param('id') id: string, @Body() updateUser: UpdateUser) {
     try {
-      return await this.userService.updateUser(id, updateUser);
+      return await this.userService.updateUser(req, id, files, updateUser);
     } catch (error) {
       console.log('resendOtp-error=======>:', error);
       throw new BadRequestException(error.message);

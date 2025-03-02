@@ -21,9 +21,9 @@ export class CategoryController {
   }
 
   @Get()
-  async findAll(): Promise<Category[]> {
+  async findAll(@Request() request): Promise<Category[]> {
     try {
-      return this.categoryService.findAll();
+      return this.categoryService.findAll(request.user);
     } catch (error) {
       console.log('findAll-category-error=======>:', error);
       throw new BadRequestException(error.message);

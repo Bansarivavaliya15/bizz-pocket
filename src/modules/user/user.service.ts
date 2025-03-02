@@ -127,14 +127,32 @@ export class UserService {
   }
 
 
-  async updateUser(id: string, updateUser: UpdateUser) {
+  uploadDocument(req, files): string[] {
+    const baseURL = process.env.BASE_URL || req.protocol + '://' + req.get('host');
+    return files.map((file) => (baseURL + '/' + file.filename));
+  }
 
-    const user = await this.userModel.findById(id)
+
+  async updateUser(req, id: string, file, updateUser: UpdateUser) {
+
+    const user = await this.userModel.findOne({ isDeleted: false, _id: id })
 
     if (!user)
       throw new Error("User not found")
 
-    return await this.userModel.updateOne({ _id: id }, updateUser);
+    const updateFields: Partial<User> = {};
+    updateFields.email = updateUser.email ?? user.email;
+    updateFields.language = updateUser.language ?? user.language;
+    updateFields.type = updateUser.type ?? user.type;
+    updateFields.userName = updateUser.userName ?? user.userName;
+    updateFields.name = updateUser.name ?? user.name;
+    updateFields.tableSize = updateUser.tableSize ?? user.tableSize;
+
+    if (file) {
+      const baseURL = process.env.BASE_URL || req.protocol + '://' + req.get('host');
+      updateFields.profile = baseURL + '/' + file.filename
+    }
+    return await this.userModel.updateOne({ _id: id }, updateFields, { new: true });
 
   }
 

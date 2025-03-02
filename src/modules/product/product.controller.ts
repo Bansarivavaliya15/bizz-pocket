@@ -23,9 +23,9 @@ export class ProductController {
   }
 
   @Get()
-  async findAll(): Promise<Product[]> {
+  async findAll(@Request() req): Promise<Product[]> {
     try {
-      return await this.productService.findAll();
+      return await this.productService.findAll(req.user);
     } catch (error) {
       console.log('product-error=======>:', error);
       throw new BadRequestException(error.message);

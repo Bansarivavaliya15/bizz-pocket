@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { CreateProductDto, UpdateProductDto } from 'src/dto/product.dto';
 import { Category } from 'src/schema/category.schema';
 import { Product } from 'src/schema/product.schema';
+import { User } from 'src/schema/user.schema';
 
 @Injectable()
 export class ProductService {
@@ -37,12 +38,12 @@ export class ProductService {
         return product.save();
     }
 
-    async findAll(): Promise<Product[]> {
-        return this.productModel.find().populate('category').populate('user');
+    async findAll(user: User): Promise<Product[]> {
+        return this.productModel.find({ isDeleted: false, user: { _id: user._id } }).populate('category').populate('user');
     }
 
     async findOne(id: string): Promise<Product> {
-        const product = await this.productModel.findById(id).populate('category').populate('user');
+        const product = await this.productModel.findOne({ isDeleted: false, _id: id }).populate('category').populate('user');
         if (!product) throw new Error('Product not found');
 
         return product;
@@ -67,7 +68,7 @@ export class ProductService {
             updateFields.attachments = this.uploadDocument(req, files);
         }
 
-        return await this.productModel.findByIdAndUpdate(id, updateProductDto, { new: true });
+        return await this.productModel.findByIdAndUpdate(id, updateFields, { new: true });
     }
 
     async delete(id: string): Promise<{ message: string }> {

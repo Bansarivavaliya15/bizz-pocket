@@ -11,6 +11,9 @@ export class User extends BaseSchema {
     @Prop()
     email: string;
 
+    @Prop()
+    profile: string;
+
     @Prop({ default: false })
     isVerified: boolean;
 

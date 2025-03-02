@@ -22,12 +22,12 @@ export class CategoryService {
         return category.save();
     }
 
-    async findAll(): Promise<Category[]> {
-        return this.categoryModel.find({ isDeleted: false }).populate('user');
+    async findAll(user: User): Promise<Category[]> {
+        return this.categoryModel.find({ isDeleted: false, user: { _id: user._id } }).populate('user');
     }
 
     async findOne(id: string): Promise<Category> {
-        const category = await this.categoryModel.findById(id).populate('user');
+        const category = await this.categoryModel.findOne({ isDeleted: false, _id: id }).populate('user');
         if (!category) throw new Error('Category not found');
 
         return category;
