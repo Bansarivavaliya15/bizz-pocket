@@ -5,6 +5,8 @@ import { CreateProductDto, UpdateProductDto } from 'src/dto/product.dto';
 import { Category } from 'src/entites/category.entity';
 import { Product } from 'src/entites/product.entity';
 import { User } from 'src/entites/user.entity';
+import { uploadDocument } from '../../common/utils/helper'
+import { GetAllCategory } from 'src/dto/category.dto';
 
 @Injectable()
 export class ProductService {
@@ -16,10 +18,6 @@ export class ProductService {
         private readonly categoryRepository: Repository<Category>,
     ) { }
 
-    uploadDocument(req, files): string[] {
-        const baseURL = process.env.BASE_URL || req.protocol + '://' + req.get('host');
-        return files.map((file) => (baseURL + '/' + file.filename));
-    }
 
     async create(req, files, createProductDto: CreateProductDto): Promise<Product> {
         const [existingProduct, category] = await Promise.all([
@@ -35,17 +33,35 @@ export class ProductService {
             price: Number(createProductDto.price),
             category,
             user: req.user,
-            attachments: files ? this.uploadDocument(req, files) : [],
+            attachments: files ? uploadDocument(req, files) : [],
         });
 
         return this.productRepository.save(product);
     }
 
-    async findAll(user: User): Promise<Product[]> {
-        return this.productRepository.find({
-            where: { isDeleted: false, user: { id: user.id } },
-            relations: ['category', 'user'],
-        });
+    async findAll(user: User, getAllCategory: GetAllCategory) {
+        const { search, skip, limit } = getAllCategory
+        let query = this.productRepository
+            .createQueryBuilder('product')
+            .leftJoinAndSelect('product.category', 'category')
+            .leftJoinAndSelect('product.user', 'user')
+            .where('user.id = :userId AND product.isDeleted = false', { userId: user.id })
+
+
+        if (search && search.trim() && search.trim().length) {
+            query = query.andWhere(
+                '(product.title ILIKE :searchTerm OR product.description ILIKE :searchTerm)',
+                { searchTerm: `%${search}%` },
+            );
+        }
+
+        const [data, count] = await query.skip(skip).limit(limit).getManyAndCount()
+        return {
+            count,
+            data,
+            skip,
+            limit
+        };
     }
 
     async findOne(id: string): Promise<Product> {
@@ -75,7 +91,7 @@ export class ProductService {
             description: updateProductDto.description ?? existingProduct.description,
             price: Number(updateProductDto.price) ?? Number(existingProduct.price),
             category,
-            attachments: files ? this.uploadDocument(req, files) : existingProduct.attachments,
+            attachments: files ? uploadDocument(req, files) : existingProduct.attachments,
         };
 
         return this.productRepository.save({ ...existingProduct, ...updateFields });

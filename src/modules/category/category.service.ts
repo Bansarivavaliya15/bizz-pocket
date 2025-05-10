@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { CreateCategoryInput } from 'src/dto/category.dto';
 import { Category } from 'src/entites/category.entity';
 import { User } from 'src/entites/user.entity';
+import { uploadDocument } from '../../common/utils/helper'
 
 @Injectable()
 export class CategoryService {
@@ -12,7 +13,8 @@ export class CategoryService {
         private readonly categoryRepository: Repository<Category>,
     ) { }
 
-    async create(user: User, createCategoryInput: CreateCategoryInput): Promise<Category> {
+    async create(req, files, createCategoryInput: CreateCategoryInput): Promise<Category> {
+        const { user } = req
         const existingCategory = await this.categoryRepository.findOne({
             where: { name: createCategoryInput.name, isDeleted: false },
         });
@@ -24,6 +26,7 @@ export class CategoryService {
         const category = this.categoryRepository.create({
             name: createCategoryInput.name,
             user,
+            attachments: files ? uploadDocument(req, files) : [],
         });
 
         return this.categoryRepository.save(category);

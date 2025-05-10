@@ -1,8 +1,10 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Request, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Request, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryInput } from 'src/dto/category.dto';
 import { Category } from 'src/entites/category.entity';
 import { AuthGuard } from 'src/common/guards/auth.gurad';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { multerOptions } from 'src/multer.config';
 
 @UseGuards(AuthGuard)
 @Controller('category')
@@ -11,9 +13,10 @@ export class CategoryController {
 
 
   @Post('create')
-  async create(@Request() request, @Body() createCategoryInput: CreateCategoryInput) {
+  @UseInterceptors(FilesInterceptor('attachments', 20, multerOptions))
+  async create(@Request() request, @UploadedFiles() files, @Body() createCategoryInput: CreateCategoryInput) {
     try {
-      return await this.categoryService.create(request.user, createCategoryInput);
+      return await this.categoryService.create(request, files, createCategoryInput);
     } catch (error) {
       console.log('create-category-error=======>:', error);
       throw new BadRequestException(error.message);
@@ -21,7 +24,7 @@ export class CategoryController {
   }
 
   @Get()
-  async findAll(@Request() request): Promise<Category[]> {
+  async findAll(@Request() request, @Body() createCategoryInput: CreateCategoryInput): Promise<Category[]> {
     try {
       return this.categoryService.findAll(request.user);
     } catch (error) {

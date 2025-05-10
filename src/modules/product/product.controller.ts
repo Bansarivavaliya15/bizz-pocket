@@ -5,6 +5,7 @@ import { CreateProductDto, UpdateProductDto } from 'src/dto/product.dto';
 import { Product } from 'src/entites/product.entity';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from 'src/multer.config';
+import { GetAllCategory } from 'src/dto/category.dto';
 
 @Controller('products')
 @UseGuards(AuthGuard)
@@ -23,9 +24,9 @@ export class ProductController {
   }
 
   @Get()
-  async findAll(@Request() req): Promise<Product[]> {
+  async findAll(@Request() req, @Body() getAllCategory: GetAllCategory) {
     try {
-      return await this.productService.findAll(req.user);
+      return await this.productService.findAll(req.user, getAllCategory);
     } catch (error) {
       console.log('product-error=======>:', error);
       throw new BadRequestException(error.message);
