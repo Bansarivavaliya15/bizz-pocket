@@ -8,6 +8,7 @@ import { Product } from './product.entity';
 import { Category } from './category.entity';
 import { Verification } from './verification.entity';
 import { AccountType, Language, Role } from 'enum';
+import { Shop } from './shop.entity';
 
 @Entity('users')
 export class User extends BaseEntity {
@@ -16,6 +17,9 @@ export class User extends BaseEntity {
 
     @Column({ nullable: true })
     email: string;
+
+    @Column({ nullable: true })
+    password: string;
 
     @Column({ nullable: true })
     profile: string;
@@ -56,6 +60,10 @@ export class User extends BaseEntity {
     })
     role: Role;
 
+    @Column({ default: false })
+    isLoginEnable: boolean;
+
+
     // Relations
     @OneToMany(() => Product, (product) => product.user)
     products: Product[];
@@ -65,4 +73,7 @@ export class User extends BaseEntity {
 
     @OneToMany(() => Verification, (verification) => verification.user)
     verifications: Verification[];
+
+    @OneToMany(() => Shop, (shop) => shop.user)
+    shops: Shop[];
 }

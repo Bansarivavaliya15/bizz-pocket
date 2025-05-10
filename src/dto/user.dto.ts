@@ -28,6 +28,18 @@ export class VerifyUserInput {
     deviceToken: string;
 }
 
+export class LoginV2Input {
+    @IsNotEmpty()
+    email: string
+
+    @IsNotEmpty()
+    password: string
+
+    @IsNotEmpty()
+    deviceToken: string;
+
+}
+
 
 export class ResendOtpInput extends LoginUserInput {
     @IsNotEmpty()

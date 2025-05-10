@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Request, BadRequestException, Param, Put, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { UserService } from './user.service';
-import { LoginUserInput, VerifyUserInput, ResendOtpInput, UpdateUser } from 'src/dto/user.dto';
+import { LoginUserInput, VerifyUserInput, ResendOtpInput, UpdateUser, LoginV2Input } from 'src/dto/user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from 'src/multer.config';
 
@@ -8,6 +8,28 @@ import { multerOptions } from 'src/multer.config';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) { }
+
+
+
+  @Post('create/super-admin')
+  async createSuperAdmin() {
+    try {
+      return this.userService.createSuperAdmin();
+    } catch (error) {
+      console.log('createSuperAdmin-errror=======>:', error);
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Post('v2/login')
+  async loginV2(@Request() req: Request, @Body() loginV2Input: LoginV2Input) {
+    try {
+      return await this.userService.loginV2(req, loginV2Input);
+    } catch (error) {
+      console.log('loginV2-errror=======>:', error);
+      throw new BadRequestException(error.message);
+    }
+  }
 
   @Post('login')
   async userLogin(@Body() loginUserInput: LoginUserInput) {

@@ -29,7 +29,8 @@ export class AuthGuard implements CanActivate {
             });
             request['user'] = payload.user
             const user = await this.userRepository.findOne({ where: { id: payload.userId } });
-            if (user.isDeleted == true || user.deviceToken != payload.deviceToken) {
+            if (user.isDeleted == true) {
+                // if (user.isDeleted == true || user.deviceToken != payload.deviceToken) {
                 throw new UnauthorizedException();
             }
             return true;

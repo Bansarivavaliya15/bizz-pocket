@@ -4,9 +4,11 @@ import { Repository } from 'typeorm';
 import * as moment from 'moment-timezone';
 import * as jwt from 'jsonwebtoken';
 import axios from 'axios';
-import { LoginUserInput, VerifyUserInput, ResendOtpInput, UpdateUser } from 'src/dto/user.dto';
+import { LoginUserInput, VerifyUserInput, ResendOtpInput, UpdateUser, LoginV2Input } from 'src/dto/user.dto';
 import { User } from 'src/entites/user.entity';
 import { Verification } from 'src/entites/verification.entity';
+import { Role } from 'enum';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -16,7 +18,71 @@ export class UserService {
 
     @InjectRepository(Verification)
     private readonly verificationRepository: Repository<Verification>,
+
   ) { }
+
+
+  async createSuperAdmin(): Promise<User> {
+    const craeteSuperAdmin = {
+      mobileNo: "1234567890",
+      email: "superadmin@gmail.com",
+      userName: "superadmin",
+      name: "Super Admin",
+      role: Role.SUPER_ADMIN,
+      password: bcrypt.hashSync("Test@123", 10)
+    }
+    const existingUser = await this.userRepository.findOne({
+      where: { mobileNo: craeteSuperAdmin.mobileNo, isDeleted: false },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('User with this mobile number already exists');
+    }
+
+    const user = this.userRepository.create({
+      ...craeteSuperAdmin,
+      isVerified: true, // or false based on your flow
+    });
+
+    return this.userRepository.save(user);
+  }
+
+
+  async loginV2(req: Request, loginV2Input: LoginV2Input) {
+    const { email, password, deviceToken } = loginV2Input;
+
+    const user = await this.userRepository.findOne({
+      where: {
+        email: email,
+        isDeleted: false,
+      },
+    });
+    if (!user) {
+      throw new Error('User not exist by this email.');
+    }
+
+    // if (user.deviceToken !== deviceToken) {
+    //   throw new BadRequestException('You cannot log in from another device.');
+    // }
+    if (user.password && !bcrypt.compareSync(password, user.password)) {
+      throw new Error('Incorrect password.');
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, user, deviceToken, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.TOKEN_EXPIRATION_TIME },
+    );
+    return {
+      token: token,
+      user: await this.userRepository.findOne({
+        where: {
+          userName: email,
+          isDeleted: false,
+        },
+      }),
+    };
+  }
 
   async sendSms(mobileNo: string, otp: number, areaCode: string, signature: string) {
     const queryObj = {
@@ -87,7 +153,7 @@ export class UserService {
     await this.userRepository.save(user);
 
     const token = jwt.sign(
-      { userId: id, user, deviceToken },
+      { userId: id, user, deviceToken, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.TOKEN_EXPIRATION_TIME },
     );
