@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, UseIntercep
 import { ProductService } from './product.service';
 import { AuthGuard } from 'src/common/guards/auth.gurad';
 import { CreateProductDto, UpdateProductDto } from 'src/dto/product.dto';
-import { Product } from 'src/schema/product.schema';
+import { Product } from 'src/entites/product.entity';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from 'src/multer.config';
 

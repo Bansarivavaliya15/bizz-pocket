@@ -1,57 +1,79 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateCategoryInput } from 'src/dto/category.dto';
-import { Category } from 'src/schema/category.schema';
-import { User } from 'src/schema/user.schema';
+import { Category } from 'src/entites/category.entity';
+import { User } from 'src/entites/user.entity';
 
 @Injectable()
 export class CategoryService {
     constructor(
-        @InjectModel(Category.name) private readonly categoryModel: Model<Category>,
+        @InjectRepository(Category)
+        private readonly categoryRepository: Repository<Category>,
     ) { }
 
-
     async create(user: User, createCategoryInput: CreateCategoryInput): Promise<Category> {
-        const existingCategory = await this.categoryModel.findOne({ name: createCategoryInput.name });
-        if (existingCategory) throw new Error('Category with this name already exists');
+        const existingCategory = await this.categoryRepository.findOne({
+            where: { name: createCategoryInput.name, isDeleted: false },
+        });
 
-        const category = new this.categoryModel();
-        category.name = createCategoryInput.name
-        category.user = user
-        return category.save();
+        if (existingCategory) {
+            throw new BadRequestException('Category with this name already exists');
+        }
+
+        const category = this.categoryRepository.create({
+            name: createCategoryInput.name,
+            user,
+        });
+
+        return this.categoryRepository.save(category);
     }
 
     async findAll(user: User): Promise<Category[]> {
-        return this.categoryModel.find({ isDeleted: false, user: { _id: user._id } }).populate('user');
+        return this.categoryRepository.find({
+            where: { isDeleted: false, user: { id: user.id } },
+            relations: ['user'],
+        });
     }
 
     async findOne(id: string): Promise<Category> {
-        const category = await this.categoryModel.findOne({ isDeleted: false, _id: id }).populate('user');
-        if (!category) throw new Error('Category not found');
+        const category = await this.categoryRepository.findOne({
+            where: { id, isDeleted: false },
+            relations: ['user'],
+        });
+
+        if (!category) {
+            throw new NotFoundException('Category not found');
+        }
 
         return category;
     }
 
     async update(id: string, updateCategoryDto: Partial<CreateCategoryInput>): Promise<Category> {
-        const existingCategory = await this.categoryModel.findOne({
-            _id: id,
-            isDeleted: false
+        const category = await this.categoryRepository.findOne({
+            where: { id, isDeleted: false },
         });
-        if (!existingCategory) throw new Error('Category not exists');
 
-        return await this.categoryModel.findByIdAndUpdate(id, updateCategoryDto, { new: true });
+        if (!category) {
+            throw new NotFoundException('Category does not exist');
+        }
+
+        Object.assign(category, updateCategoryDto);
+        return this.categoryRepository.save(category);
     }
 
     async delete(id: string): Promise<{ message: string }> {
-        const existingCategory = await this.categoryModel.findOne({
-            _id: id,
-            isDeleted: false
+        const category = await this.categoryRepository.findOne({
+            where: { id, isDeleted: false },
         });
-        if (!existingCategory) throw new Error('Category not exists');
 
-        await this.categoryModel.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
+        if (!category) {
+            throw new NotFoundException('Category does not exist');
+        }
 
-        return { message: "Category Delete successfully" };
+        category.isDeleted = true;
+        await this.categoryRepository.save(category);
+
+        return { message: 'Category deleted successfully' };
     }
 }

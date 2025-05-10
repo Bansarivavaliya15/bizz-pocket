@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Request, UseGuards } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryInput } from 'src/dto/category.dto';
-import { Category } from 'src/schema/category.schema';
+import { Category } from 'src/entites/category.entity';
 import { AuthGuard } from 'src/common/guards/auth.gurad';
 
 @UseGuards(AuthGuard)

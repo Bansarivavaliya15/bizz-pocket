@@ -1,6 +1,5 @@
 import { IsString, IsNotEmpty, IsOptional, IsNumber, IsObject, IsBoolean, IsArray } from 'class-validator';
 import { AccountType, Language } from 'enum';
-import { ObjectId } from 'mongoose';
 
 export class LoginUserInput {
     @IsNotEmpty()
@@ -20,7 +19,7 @@ export class LoginUserInput {
 
 export class VerifyUserInput {
     @IsNotEmpty()
-    id: ObjectId;
+    id: string;
 
     @IsNotEmpty()
     otp: number;
@@ -32,7 +31,7 @@ export class VerifyUserInput {
 
 export class ResendOtpInput extends LoginUserInput {
     @IsNotEmpty()
-    id: ObjectId;
+    id: string;
 
     @IsNotEmpty()
     deviceToken: string;

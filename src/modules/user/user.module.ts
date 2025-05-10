@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { Verification, VerificationSchema } from 'src/schema/verification.schema';
-import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from 'src/schema/user.schema';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from 'src/entites/user.entity';
+import { Verification } from 'src/entites/verification.entity';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Verification.name, schema: VerificationSchema }, { name: User.name, schema: UserSchema }])],
+  imports: [TypeOrmModule.forFeature([User, Verification])],
   controllers: [UserController],
   providers: [UserService],
 })

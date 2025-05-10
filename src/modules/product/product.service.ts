@@ -1,18 +1,20 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateProductDto, UpdateProductDto } from 'src/dto/product.dto';
-import { Category } from 'src/schema/category.schema';
-import { Product } from 'src/schema/product.schema';
-import { User } from 'src/schema/user.schema';
+import { Category } from 'src/entites/category.entity';
+import { Product } from 'src/entites/product.entity';
+import { User } from 'src/entites/user.entity';
 
 @Injectable()
 export class ProductService {
     constructor(
-        @InjectModel(Product.name) private productModel: Model<Product>,
-        @InjectModel(Category.name) private readonly categoryModel: Model<Category>
-    ) { }
+        @InjectRepository(Product)
+        private readonly productRepository: Repository<Product>,
 
+        @InjectRepository(Category)
+        private readonly categoryRepository: Repository<Category>,
+    ) { }
 
     uploadDocument(req, files): string[] {
         const baseURL = process.env.BASE_URL || req.protocol + '://' + req.get('host');
@@ -21,64 +23,73 @@ export class ProductService {
 
     async create(req, files, createProductDto: CreateProductDto): Promise<Product> {
         const [existingProduct, category] = await Promise.all([
-            this.productModel.findOne({ name: createProductDto.name }),
-            this.categoryModel.findOne({ _id: createProductDto.categoryId })
+            this.productRepository.findOne({ where: { name: createProductDto.name, isDeleted: false } }),
+            this.categoryRepository.findOne({ where: { id: createProductDto.categoryId, isDeleted: false } }),
         ]);
-        if (existingProduct) throw new Error('Product with this name already exists');
-        if (!category) throw new Error('Category not found with this category id.');
 
-        const product = new this.productModel();
-        if (files) {
-            product.attachments = this.uploadDocument(req, files)
-        }
-        product.category = category;
-        product.price = Number(createProductDto.price);
-        product.name = createProductDto.name;
-        product.user = req.user;
-        return product.save();
+        if (existingProduct) throw new BadRequestException('Product with this name already exists');
+        if (!category) throw new NotFoundException('Category not found with this category id');
+
+        const product = this.productRepository.create({
+            name: createProductDto.name,
+            price: Number(createProductDto.price),
+            category,
+            user: req.user,
+            attachments: files ? this.uploadDocument(req, files) : [],
+        });
+
+        return this.productRepository.save(product);
     }
 
     async findAll(user: User): Promise<Product[]> {
-        return this.productModel.find({ isDeleted: false, user: { _id: user._id } }).populate('category').populate('user');
+        return this.productRepository.find({
+            where: { isDeleted: false, user: { id: user.id } },
+            relations: ['category', 'user'],
+        });
     }
 
     async findOne(id: string): Promise<Product> {
-        const product = await this.productModel.findOne({ isDeleted: false, _id: id }).populate('category').populate('user');
-        if (!product) throw new Error('Product not found');
+        const product = await this.productRepository.findOne({
+            where: { id, isDeleted: false },
+            relations: ['category', 'user'],
+        });
 
+        if (!product) throw new NotFoundException('Product not found');
         return product;
     }
 
     async update(req, files, id: string, updateProductDto: UpdateProductDto): Promise<Product> {
-        const existingProduct = await this.productModel.findOne({
-            _id: id,
-            isDeleted: false
-        }).populate('category');
+        const existingProduct = await this.productRepository.findOne({
+            where: { id, isDeleted: false },
+            relations: ['category'],
+        });
 
-        if (!existingProduct) throw new Error('Product not found');
-        const category = await this.categoryModel.findOne({ _id: updateProductDto.categoryId ?? existingProduct.category._id, isDeleted: false })
+        if (!existingProduct) throw new NotFoundException('Product not found');
 
-        const updateFields: Partial<Product> = {};
-        updateFields.name = updateProductDto.name ?? existingProduct.name;
-        updateFields.description = updateProductDto.description ?? existingProduct.description;
-        updateFields.price = Number(updateProductDto.price) ?? Number(existingProduct.price);
-        updateFields.category = category;
+        const category = await this.categoryRepository.findOne({
+            where: { id: updateProductDto.categoryId ?? existingProduct.category.id, isDeleted: false },
+        });
 
-        if (files) {
-            updateFields.attachments = this.uploadDocument(req, files);
-        }
+        const updateFields: Partial<Product> = {
+            name: updateProductDto.name ?? existingProduct.name,
+            description: updateProductDto.description ?? existingProduct.description,
+            price: Number(updateProductDto.price) ?? Number(existingProduct.price),
+            category,
+            attachments: files ? this.uploadDocument(req, files) : existingProduct.attachments,
+        };
 
-        return await this.productModel.findByIdAndUpdate(id, updateFields, { new: true });
+        return this.productRepository.save({ ...existingProduct, ...updateFields });
     }
 
     async delete(id: string): Promise<{ message: string }> {
-        const existingProduct = await this.productModel.findOne({
-            _id: id,
-            isDeleted: false
+        const existingProduct = await this.productRepository.findOne({
+            where: { id, isDeleted: false },
         });
-        if (!existingProduct) throw new Error('Product not found');
 
-        await this.productModel.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
+        if (!existingProduct) throw new NotFoundException('Product not found');
+
+        existingProduct.isDeleted = true;
+        await this.productRepository.save(existingProduct);
 
         return { message: 'Product deleted successfully' };
     }

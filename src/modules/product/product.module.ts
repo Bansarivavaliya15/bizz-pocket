@@ -1,18 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { ProductController } from './product.controller';
-import { MongooseModule } from '@nestjs/mongoose';
-import { Category, CategorySchema } from 'src/schema/category.schema';
-import { Product, ProductSchema } from 'src/schema/product.schema';
-import { User, UserSchema } from 'src/schema/user.schema';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
+import { Category } from 'src/entites/category.entity';
+import { Product } from 'src/entites/product.entity';
+import { User } from 'src/entites/user.entity';
 
 @Module({
-  imports: [MongooseModule.forFeature([
-    { name: Category.name, schema: CategorySchema },
-    { name: User.name, schema: UserSchema },
-    { name: Product.name, schema: ProductSchema }
-  ])],
+  imports: [TypeOrmModule.forFeature([Category, User, Product])],
   controllers: [ProductController],
   providers: [ProductService, JwtService],
 })

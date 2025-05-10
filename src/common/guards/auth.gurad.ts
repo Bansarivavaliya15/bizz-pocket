@@ -1,16 +1,18 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
-import { Model } from 'mongoose';
-import { User } from 'src/schema/user.schema';
+import { User } from 'src/entites/user.entity';
+import { Repository } from 'typeorm';
 // import { User } from 'src/database/entities/user.entity';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
     constructor(
         private jwtService: JwtService,
-        @InjectModel(User.name) private readonly userModel: Model<User>,
+        @InjectRepository(User)
+        private readonly userRepository: Repository<User>,
+
     ) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -26,7 +28,7 @@ export class AuthGuard implements CanActivate {
                 secret: process.env.JWT_SECRET,
             });
             request['user'] = payload.user
-            const user = await this.userModel.findOne({ _id: payload.userId });
+            const user = await this.userRepository.findOne({ where: { id: payload.userId } });
             if (user.isDeleted == true || user.deviceToken != payload.deviceToken) {
                 throw new UnauthorizedException();
             }

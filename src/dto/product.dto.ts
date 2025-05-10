@@ -1,6 +1,5 @@
 
 import { IsString, IsOptional, IsNumber, IsArray, IsMongoId, IsNotEmpty } from 'class-validator';
-import { ObjectId } from 'mongoose';
 
 export class CreateProductDto {
     @IsString()
@@ -15,7 +14,7 @@ export class CreateProductDto {
     price: number;
 
     @IsNotEmpty()
-    categoryId: ObjectId;
+    categoryId: string;
 }
 
 export class UpdateProductDto {
@@ -31,5 +30,5 @@ export class UpdateProductDto {
     price?: number;
 
     @IsOptional()
-    categoryId?: ObjectId;
+    categoryId?: string;
 }
